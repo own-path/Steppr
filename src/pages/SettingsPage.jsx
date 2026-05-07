@@ -90,7 +90,7 @@ function SettingsPage() {
           <Row label="Friday report" sub="When to auto-generate.">
             <input type="time" className="input" value={s.fridayTime} onChange={(e) => set('fridayTime', e.target.value)} style={{ width: 120 }}/>
           </Row>
-          <Row label="Auto-send to manager" sub="Email Maya the manager version.">
+          <Row label="Auto-send to manager" sub="Email the manager version.">
             <Toggle on={false} onChange={() => {}}/>
           </Row>
           <Row label="Default tone" sub="">

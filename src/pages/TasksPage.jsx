@@ -168,10 +168,10 @@ function TasksPage() {
         </div>
         <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
           {[
-            'Break down "RAG eval v2" into subtasks',
-            'Suggest mentor for "LoRA sweep"',
-            'When should I escalate cluster quota?',
-            'Smart reminder for Friday report',
+            cols.progress[0] ? `Break down "${cols.progress[0].title}"` : 'Add an in-progress task to break down',
+            cols.blocked[0] ? `Escalate blocker: ${cols.blocked[0].title}` : 'No blocked tasks in Convex',
+            cols.backlog[0] ? `Prioritize backlog: ${cols.backlog[0].title}` : 'Backlog is empty',
+            'Create reminder from selected task',
           ].map(t => (
             <button key={t} className="btn"><I.Spark size={12}/> {t}</button>
           ))}

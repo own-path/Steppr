@@ -162,21 +162,27 @@ function DashboardPage() {
   const { user } = useCurrentUser();
   const wins = useQuery(api.appData.listWins);
   const scores = useQuery(api.appData.listGrowthScores);
+  const tasks = useQuery(api.appData.listTasks);
+  const logs = useQuery(api.appData.listDailyLogs);
 
-  if (wins === undefined || scores === undefined) {
+  if (wins === undefined || scores === undefined || tasks === undefined || logs === undefined) {
     return <div className="center" style={{ minHeight: 'calc(100vh - 56px)' }}><div style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid var(--accent-soft)', borderTopColor: 'var(--accent)', animation: 'spin 0.7s linear infinite' }}/></div>
   }
 
   const statCols = isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)';
   const mainCols = isDesktop ? '1.4fr 1fr' : '1fr';
   const bottomCols = isMobile ? '1fr' : isTablet ? '1fr 1fr' : '1.2fr 1fr 1fr';
+  const openTasks = tasks.filter(t => !['done', 'blocked'].includes(t.status)).slice(0, 3);
+  const blockedTasks = tasks.filter(t => t.status === 'blocked').length;
+  const avgScore = scores.length ? Math.round(scores.reduce((sum, s) => sum + s.value, 0) / scores.length) : 0;
+  const learningLogs = logs.filter(log => log.learned).length;
 
   return (
     <div style={{ maxWidth: 1480, margin: '0 auto', padding: isMobile ? '20px 16px 0' : '32px 32px 0' }}>
       {/* Hero */}
       <div style={{ position: 'relative', marginBottom: 32 }}>
         {!isMobile && <PixelLockup text="STEPPR" style={{ position: 'absolute', right: -8, top: -22, fontSize: 'clamp(60px, 9vw, 140px)' }}/>}
-        <div className="eyebrow" style={{ marginBottom: 8, color: 'var(--accent-2)' }}>Week 3 · Momentum strong</div>
+        <div className="eyebrow" style={{ marginBottom: 8, color: 'var(--accent-2)' }}>Current week · Database backed</div>
         <h1 className="h1" style={{ fontSize: isMobile ? 'clamp(28px,6vw,36px)' : 'clamp(36px, 4.4vw, 56px)', maxWidth: 720 }}>
           Welcome back, {user?.name?.split(' ')[0] || 'there'}.<br/>
           <span style={{ color: 'var(--ink-4)' }}>You shipped {wins.length} wins this week.</span>
@@ -190,10 +196,10 @@ function DashboardPage() {
 
       {/* Stat row */}
       <div className="grid" style={{ gridTemplateColumns: statCols, gap: 16, marginBottom: 16 }}>
-        <StatCard icon="Bolt" label="Momentum" value={86} suffix="" delta={+4} color="#003594" spark={[40,55,48,62,70,68,82,86]}/>
-        <StatCard icon="Flame" label="Day streak" value={18} delta={+12} color="#F59E0B" spark={[2,4,6,8,10,12,15,18]}/>
-        <StatCard icon="Trophy" label="Wins this week" value={7} delta={+40} color="#8B5CF6" spark={[3,4,5,4,6,7,6,7]}/>
-        <StatCard icon="Brain" label="Learning velocity" value={91} delta={+6} color="#4F46E5" spark={[60,68,72,78,80,85,88,91]}/>
+        <StatCard icon="Bolt" label="Momentum" value={avgScore} suffix="" color="#003594" spark={scores[0]?.series || [avgScore]}/>
+        <StatCard icon="Flame" label="Logs captured" value={logs.length} color="#F59E0B" spark={logs.length ? logs.map((_, i) => i + 1).slice(-8) : [0]}/>
+        <StatCard icon="Trophy" label="Wins this week" value={wins.length} color="#8B5CF6" spark={wins.length ? wins.map((_, i) => i + 1).slice(-8) : [0]}/>
+        <StatCard icon="Brain" label="Learnings" value={learningLogs} color="#4F46E5" spark={learningLogs ? logs.filter(l => l.learned).map((_, i) => i + 1).slice(-8) : [0]}/>
       </div>
 
       {/* Main grid */}
@@ -208,16 +214,12 @@ function DashboardPage() {
             <button className="btn btn-ghost"><I.Sliders size={14}/> Reorder</button>
           </div>
           <div className="col gap-3">
-            {[
-              { n: '01', t: 'Finalize RAG eval v2 multi-doc benchmarks', meta: 'Est. 2h · High impact', color: '#003594' },
-              { n: '02', t: 'Send draft of Week 3 report to Maya', meta: 'Due 3 PM Friday', color: '#06B6D4' },
-              { n: '03', t: 'Pair with Priya on dataloader refactor', meta: '30m · Mentorship win', color: '#8B5CF6' },
-            ].map(it => (
-              <div key={it.n} className="row items-center gap-4" style={{ padding: 16, borderRadius: 14, background: 'var(--bg-2)', border: '1px solid var(--line)' }}>
-                <div className="font-pixel" style={{ fontSize: 36, color: it.color, lineHeight: 1, width: 56 }}>{it.n}</div>
+            {(openTasks.length ? openTasks : [{ _id: 'empty', title: 'No open tasks in Convex yet', tag: 'Empty', due: 'Add one', priority: 'low' }]).map((it, idx) => (
+              <div key={it._id} className="row items-center gap-4" style={{ padding: 16, borderRadius: 14, background: 'var(--bg-2)', border: '1px solid var(--line)' }}>
+                <div className="font-pixel" style={{ fontSize: 36, color: idx === 0 ? '#003594' : idx === 1 ? '#06B6D4' : '#8B5CF6', lineHeight: 1, width: 56 }}>{String(idx + 1).padStart(2, '0')}</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: 15 }}>{it.t}</div>
-                  <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{it.meta}</div>
+                  <div style={{ fontWeight: 600, fontSize: 15 }}>{it.title}</div>
+                  <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{it.tag} · {it.due || 'No due date'} · {it.priority}</div>
                 </div>
                 <button className="btn btn-ghost" style={{ padding: 8, borderRadius: 999 }}><I.ArrowRight size={16}/></button>
               </div>
@@ -226,7 +228,7 @@ function DashboardPage() {
           <div className="row items-center gap-2" style={{ marginTop: 18, padding: 14, borderRadius: 14, background: 'var(--accent-tint)', border: '1px solid var(--line-2)' }}>
             <I.Spark size={16} stroke="var(--accent-2)"/>
             <div style={{ flex: 1, fontSize: 13 }}>
-              <strong style={{ color: 'var(--accent-2)' }}>Suggested next move:</strong> You perform strongest after planning mornings — block 9–10 AM tomorrow for the eval push.
+              <strong style={{ color: 'var(--accent-2)' }}>Suggested next move:</strong> {blockedTasks ? `Review ${blockedTasks} blocked task${blockedTasks === 1 ? '' : 's'} from your board.` : openTasks.length ? `Start with "${openTasks[0].title}".` : 'Add a task or daily log to generate a recommendation.'}
             </div>
             <button className="btn btn-ghost" style={{ padding: '4px 10px' }} onClick={() => toast('Added to tomorrow')}>Apply</button>
           </div>
@@ -276,7 +278,7 @@ function DashboardPage() {
             <div className="eyebrow" style={{ color: 'rgba(255,255,255,0.6)' }}>AI insight</div>
           </div>
           <div style={{ fontSize: 18, fontWeight: 500, lineHeight: 1.4, letterSpacing: '-0.015em' }}>
-            "You perform strongest after planning mornings — and your Tuesday/Thursday output is <span style={{ color: '#FFB81C' }}>2.1× higher</span> than Monday/Wednesday."
+            {logs.length ? `You have ${logs.length} log${logs.length === 1 ? '' : 's'}, ${wins.length} win${wins.length === 1 ? '' : 's'}, and ${blockedTasks} blocker${blockedTasks === 1 ? '' : 's'} in Convex for this profile.` : 'No daily logs are in Convex for this profile yet.'}
           </div>
           <div className="row gap-2" style={{ marginTop: 18 }}>
             <button className="btn" style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', borderColor: 'rgba(255,255,255,0.18)' }}>Why?</button>

@@ -331,13 +331,13 @@ function DocumentPreview({ r, variant, draft, user, wins = [], fixed = false }) 
   const name = user?.name || 'Current user'
   const role = user?.role || 'Role not set'
   const winItems = draftLines(draft?.wins, wins.slice(0, 3).map(w => `${w.title}: ${w.detail}`))
-  const learningItems = draftLines(draft?.learnings, m
+  const learningItems = draft?.learnings !== undefined ? draftLines(draft.learnings) : (m
     ? ['Profile before optimizing — the bottleneck is rarely where you assume.', 'Multi-doc retrieval evals need separate latency + accuracy axes.', 'Writing RFCs surfaces hidden assumptions faster than DMing senior staff.']
     : ['I keep optimizing the wrong thing first — ego protects me from the real work.', "I'm faster than I think; the doubt is the slowest part of my week.", "Public writing scares me, but it's how I get pulled into the rooms I want."])
-  const blockerItems = draftLines(draft?.blockers, m
+  const blockerItems = draft?.blockers !== undefined ? draftLines(draft.blockers) : (m
     ? ['Cluster quota for the 8xA100 sweep — IT ticket open since Tuesday. Asking: can you nudge?', 'Eval set v3 access — pending legal review.']
     : ["Comparing myself to Jonas every standup. He's been here 3 years. I'm 5 weeks in.", "Cluster quota — felt like proof I don't matter yet. (I know that's not true.)", 'Slept 5h Tuesday. Recipe for next-day regret.'])
-  const nextItems = draftLines(draft?.next, m
+  const nextItems = draft?.next !== undefined ? draftLines(draft.next) : (m
     ? ['Ship LoRA sweep results once cluster unblocks.', 'Pair with Jonas on the streaming token-budget RFC.', "Volunteer to present at Thursday's research review."]
     : ['No laptop after 10pm. Real sleep is a feature, not a bug.', 'Ask one "dumb" question per day in standup. Out loud.', "Send Maya the manager version of this. She doesn't need the rest."])
   return (
@@ -346,7 +346,7 @@ function DocumentPreview({ r, variant, draft, user, wins = [], fixed = false }) 
 
         <div style={{ marginBottom: fixed ? 16 : 28, paddingBottom: fixed ? 12 : 18, borderBottom: '2px solid var(--ink)' }}>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: m ? 'var(--accent)' : '#7C3AED', marginBottom: 8 }}>
-            {r.week} · {m ? 'For Maya' : 'Private'}
+            {r.week} · {m ? 'Manager version' : 'Private'}
           </div>
           <h1 style={{ fontFamily: '"Newsreader", Charter, "Times New Roman", serif', fontSize: fixed ? 28 : 38, fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.2, margin: '0 0 10px', color: 'var(--ink)' }}>
             {m ? 'Weekly review' : 'My honest week'}
@@ -372,7 +372,7 @@ function DocumentPreview({ r, variant, draft, user, wins = [], fixed = false }) 
 
         {!m && (
           <div style={{ padding: '12px 16px', border: '1px solid #E9D5FF', borderRadius: 3, marginBottom: 24, fontSize: 13, color: '#581C87', fontStyle: 'italic', fontFamily: '"Newsreader", serif', lineHeight: 1.6 }}>
-            Note to self — Maya never sees this. Be honest. Spot the patterns before they become problems.
+            Private version. Be honest. Spot the patterns before they become problems.
           </div>
         )}
 
@@ -774,16 +774,16 @@ function ReviewToggle({ items, value, onChange }) {
 function ReviewCoachRail({ r, variant, reports, wins, activeIdx, setActiveIdx, setReviewDraft, onSave }) {
   const I = Icons
   const [coachDraft, setCoachDraft] = useState('')
-  const [coachReply, setCoachReply] = useState('Focus on the specific ask: Maya can unblock quota and visibility. Keep the review outcome-led, then use blockers only to explain what needs intervention.')
+  const [coachReply, setCoachReply] = useState('Use the database-backed wins, learnings, blockers, and next steps to keep this review specific to the current profile.')
   const prompts = [
     'How should I frame the blocker?',
     'Make this sound more manager-ready.',
     'What did I understate this week?',
   ]
   const insightGroups = [
-    { title: 'Weekly review insights', sub: '6 insights', items: ['Best signal: eval pipeline speedup', 'Strongest theme: technical ownership', 'Risk: blocker needs a specific ask'] },
+    { title: 'Weekly review insights', sub: `${r.wins + r.learnings + r.blockers} signals`, items: [`${r.wins} wins computed`, `${r.learnings} learnings computed`, `${r.blockers} blockers computed`] },
     { title: 'Wins to highlight', sub: `${wins.length} ready`, items: wins.slice(0, 3).map(w => w.title) },
-    { title: 'Manager framing', sub: variant === 'manager' ? 'Active' : 'Private', items: ['Lead with outcomes', 'Keep emotions out of blockers', 'Name exactly where Maya can help'] },
+    { title: 'Manager framing', sub: variant === 'manager' ? 'Active' : 'Private', items: ['Lead with outcomes', 'Keep blockers actionable', 'Name the exact support needed'] },
   ]
 
   return (
@@ -836,8 +836,8 @@ function ReviewCoachRail({ r, variant, reports, wins, activeIdx, setActiveIdx, s
           </details>
         ))}
 
-        <button onClick={() => setCoachDraft('How can I better tailor this review to Maya?')} style={{ textAlign: 'left', padding: 12, borderRadius: 8, background: 'var(--accent-tint)', border: '1px solid var(--line-2)', color: 'var(--accent-2)', fontWeight: 700, lineHeight: 1.35, fontSize: 13 }}>
-          How can I better tailor this review to Maya?
+        <button onClick={() => setCoachDraft('How can I better tailor this review to my manager?')} style={{ textAlign: 'left', padding: 12, borderRadius: 8, background: 'var(--accent-tint)', border: '1px solid var(--line-2)', color: 'var(--accent-2)', fontWeight: 700, lineHeight: 1.35, fontSize: 13 }}>
+          How can I better tailor this review to my manager?
         </button>
         <div style={{ padding: 12, borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--line)', fontSize: 12.5, lineHeight: 1.4, color: 'var(--ink-2)' }}>
           {coachReply}
@@ -860,8 +860,8 @@ function ReviewCoachRail({ r, variant, reports, wins, activeIdx, setActiveIdx, s
                 if (!request) return
                 const lower = request.toLowerCase()
                 if (lower.includes('tailor') || lower.includes('manager')) {
-                  setReviewDraft(s => ({ ...s, blockers: s.blockers.replace('Ask Maya to nudge.', 'Ask Maya to nudge the quota ticket and confirm timing for the sweep.') }))
-                  setCoachReply('I tightened the blocker ask so it names the exact manager action. The rest of the review can stay outcome-first.')
+                  setReviewDraft(s => ({ ...s, blockers: s.blockers }))
+                  setCoachReply('Keep the blocker ask specific: name the blocker, owner, and decision needed.')
                 } else if (lower.includes('trim') || lower.includes('short')) {
                   setReviewDraft(s => ({ ...s, wins: draftLines(s.wins).slice(0, 2).join('\n'), learnings: draftLines(s.learnings).slice(0, 2).join('\n') }))
                   setCoachReply('I trimmed the wins and learnings to the two strongest signals so the report reads faster.')
@@ -1058,7 +1058,7 @@ function ReportsPage() {
     setSent(true)
     sendReviewDraft({ weekKey: r.weekKey, variant, ...reviewDraft }).then(() => {
       if (e?.clientX) fireConfetti(e.clientX, e.clientY)
-      toast?.('Sent to Maya')
+      toast?.('Sent to manager')
     })
   }
 
@@ -1091,7 +1091,7 @@ function ReportsPage() {
         <div>
           <div className="eyebrow" style={{ color: 'var(--accent-2)' }}>Weekly Review</div>
           <h1 className="h1" style={{ fontSize: isMobile ? 32 : 34, margin: '4px 0 0' }}>Shape the story of your week.</h1>
-          <div className="muted" style={{ fontSize: 14, marginTop: 6 }}>{r.dates} · {r.wins} wins · {r.blockers} blockers · drafted for {variant === 'manager' ? 'Maya' : 'you'}</div>
+          <div className="muted" style={{ fontSize: 14, marginTop: 6 }}>{r.dates} · {r.wins} wins · {r.blockers} blockers · drafted for {variant === 'manager' ? 'manager review' : 'you'}</div>
         </div>
         <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
           <ReviewToggle

@@ -100,7 +100,7 @@ function DailyLogPage() {
           <h1 className="h1" style={{ fontSize: isMobile ? 32 : 44 }}>Daily reflection</h1>
         </div>
         <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
-          <button className="btn"><I.Calendar size={14}/> April</button>
+          <button className="btn"><I.Calendar size={14}/> {today.toLocaleDateString(undefined, { month: 'long' })}</button>
           {!isMobile && <button className="btn"><I.Mic size={14}/> Voice</button>}
           <button className="btn btn-accent" onClick={() => {
             saveDailyLog({
@@ -230,19 +230,19 @@ function DailyLogPage() {
                 <span className="ai-pulse"></span>
                 <div className="eyebrow" style={{ color: 'var(--accent-2)' }}>AI Reflection</div>
               </div>
-              <div className="h3" style={{ marginBottom: 8 }}>Today, in three lines.</div>
+              <div className="h3" style={{ marginBottom: 8 }}>Current entry</div>
               <div style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.6 }}>
-                You shipped a 4× speedup on the eval harness, modeled good debugging discipline by profiling first, and turned a frustration into a written principle. Strong day.
+                {text || learned || blocked || winsToday
+                  ? [text, learned, blocked, winsToday].filter(Boolean).join(' ')
+                  : 'Write today\'s entry to generate a profile-specific reflection.'}
               </div>
             </div>
             <div className="card" style={{ padding: 20 }}>
-              <div className="eyebrow" style={{ marginBottom: 10 }}>Hidden wins detected</div>
+              <div className="eyebrow" style={{ marginBottom: 10 }}>Recent log signals</div>
               <div className="col gap-2">
-                {[
-                  'Mentioned Priya 3× this week — leadership signal.',
-                  'Wrote 2nd RFC this month — ownership trending up.',
-                  'Profiling-first instinct = senior behavior.',
-                ].map((s, i) => (
+                {(((logs || []).slice(0, 3).map(log => log.reflection || log.learned || log.date)).length
+                  ? (logs || []).slice(0, 3).map(log => log.reflection || log.learned || log.date)
+                  : ['No daily logs in Convex yet.']).map((s, i) => (
                   <div key={i} className="row items-center gap-2" style={{ fontSize: 13 }}>
                     <I.Check size={14} stroke="var(--accent-2)"/>
                     <span>{s}</span>
@@ -251,12 +251,12 @@ function DailyLogPage() {
               </div>
             </div>
             <div className="card" style={{ padding: 20 }}>
-              <div className="eyebrow" style={{ marginBottom: 10 }}>Tomorrow</div>
+              <div className="eyebrow" style={{ marginBottom: 10 }}>Next from this entry</div>
               <div className="col gap-2">
                 {[
-                  { t: 'Block 9–10 AM for eval v2 push', c: 'var(--accent)' },
-                  { t: 'Escalate cluster quota to Maya', c: 'var(--rose)' },
-                  { t: 'Read attention sinks paper · 30m', c: 'var(--cyan)' },
+                  { t: blocked ? `Resolve blocker: ${blocked.split('\n')[0]}` : 'Add blockers to track next actions.', c: blocked ? 'var(--rose)' : 'var(--ink-4)' },
+                  { t: winsToday ? `Capture win: ${winsToday.split('\n')[0]}` : 'Add wins to populate the vault.', c: winsToday ? 'var(--accent)' : 'var(--ink-4)' },
+                  { t: learned ? `Save learning: ${learned.split('\n')[0]}` : 'Add a learning to improve review quality.', c: learned ? 'var(--cyan)' : 'var(--ink-4)' },
                 ].map((s, i) => (
                   <div key={i} className="row items-center gap-2" style={{ fontSize: 13, padding: '6px 0' }}>
                     <span style={{ width: 6, height: 6, borderRadius: 999, background: s.c }}></span>

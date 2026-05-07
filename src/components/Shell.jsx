@@ -52,10 +52,10 @@ function TopBar({ route, setRoute }) {
           {isDesktop && (
             <>
               <div className="chip" style={{ background: 'var(--surface)' }}>
-                <I.Calendar size={13}/> Week 3 · Apr 19–25
+                <I.Calendar size={13}/> Current week
               </div>
-              <div className="chip chip-amber" title="Career streak">
-                <I.Flame size={13}/> 18 day streak
+              <div className="chip chip-amber" title="Database status">
+                <I.Flame size={13}/> Synced
               </div>
               <div className="chip" style={{ background: 'var(--surface)' }}>
                 <span className="ai-pulse"></span> AI online
