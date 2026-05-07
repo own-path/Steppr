@@ -1,0 +1,240 @@
+/* Steppr — design tokens + base styles */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=VT323&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Canvas + surfaces */
+  --bg: #FAFAF7;
+  --bg-2: #F4F1EC;
+  --bg-3: #ECE8E1;
+  --surface: #FFFFFF;
+  --surface-2: #F7F5F0;
+  --line: rgba(20, 18, 14, 0.08);
+  --line-2: rgba(20, 18, 14, 0.14);
+
+  /* Ink */
+  --ink: #14120E;
+  --ink-2: #2B2823;
+  --ink-3: #59544B;
+  --ink-4: #8A8478;
+  --ink-5: #B8B2A6;
+
+  /* Brand + functional */
+  --accent: #10B981;          /* emerald */
+  --accent-2: #059669;
+  --accent-soft: #D1FAE5;
+  --accent-tint: #ECFDF5;
+
+  --amber: #F59E0B;
+  --amber-soft: #FEF3C7;
+  --rose: #F43F5E;
+  --rose-soft: #FFE4E6;
+  --cyan: #06B6D4;
+  --cyan-soft: #CFFAFE;
+  --violet: #8B5CF6;
+  --violet-soft: #EDE9FE;
+  --indigo: #4F46E5;
+  --indigo-soft: #E0E7FF;
+  --pink: #EC4899;
+  --pink-soft: #FCE7F3;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(20, 18, 14, 0.04), 0 1px 1px rgba(20, 18, 14, 0.03);
+  --shadow-md: 0 4px 12px rgba(20, 18, 14, 0.05), 0 2px 4px rgba(20, 18, 14, 0.03);
+  --shadow-lg: 0 24px 48px -12px rgba(20, 18, 14, 0.10), 0 8px 16px -8px rgba(20, 18, 14, 0.06);
+  --shadow-dock: 0 24px 48px -12px rgba(20, 18, 14, 0.18), 0 4px 12px rgba(20, 18, 14, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+
+  /* Radii */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-2xl: 36px;
+  --r-pill: 999px;
+
+  /* Density */
+  --pad-1: 6px;
+  --pad-2: 10px;
+  --pad-3: 14px;
+  --pad-4: 20px;
+  --pad-5: 28px;
+  --pad-6: 40px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  letter-spacing: -0.005em;
+}
+
+#root { min-height: 100vh; }
+
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; padding: 0; }
+input, textarea { font-family: inherit; }
+
+.font-pixel { font-family: 'VT323', monospace; letter-spacing: 0.02em; }
+.font-mono  { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+.font-display { font-family: 'Space Grotesk', sans-serif; font-weight: 700; letter-spacing: -0.04em; }
+
+/* Page background grain */
+.app-bg {
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(16,185,129,0.06), transparent 60%),
+    radial-gradient(900px 500px at -10% 90%, rgba(139,92,246,0.04), transparent 60%),
+    var(--bg);
+  min-height: 100vh;
+}
+
+/* Card */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Subtle inner ring on hover for cards that "lift" */
+.lift {
+  transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s, border-color .25s;
+}
+.lift:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--line-2); }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: var(--r-pill);
+  font-weight: 500; font-size: 13.5px; letter-spacing: -0.01em;
+  border: 1px solid var(--line); background: var(--surface);
+  transition: all .18s ease;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--line-2); background: var(--surface-2); }
+.btn-primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+.btn-primary:hover { background: var(--ink-2); border-color: var(--ink-2); }
+.btn-accent { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-accent:hover { background: var(--accent-2); border-color: var(--accent-2); }
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn-ghost:hover { background: var(--bg-2); }
+
+/* Chip */
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: var(--r-pill);
+  font-size: 12px; font-weight: 500;
+  background: var(--bg-2); color: var(--ink-2);
+  border: 1px solid var(--line);
+}
+.chip-accent { background: var(--accent-tint); color: var(--accent-2); border-color: rgba(16,185,129,0.2); }
+.chip-amber  { background: var(--amber-soft); color: #92400E; border-color: rgba(245,158,11,0.25); }
+.chip-rose   { background: var(--rose-soft); color: #9F1239; border-color: rgba(244,63,94,0.25); }
+.chip-cyan   { background: var(--cyan-soft); color: #155E75; border-color: rgba(6,182,212,0.25); }
+.chip-violet { background: var(--violet-soft); color: #5B21B6; border-color: rgba(139,92,246,0.25); }
+.chip-indigo { background: var(--indigo-soft); color: #3730A3; border-color: rgba(79,70,229,0.25); }
+
+/* Layout */
+.dock-spacer { height: 110px; } /* leave space at bottom for the dock */
+
+/* Scroll polish */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 999px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-5); }
+
+/* Page transitions — no animation, just fade-in via opacity to avoid stuck states in static captures */
+.page-enter { opacity: 1; }
+
+/* Pixel display lockup */
+.pixel-display {
+  font-family: 'VT323', monospace;
+  font-size: clamp(80px, 14vw, 220px);
+  line-height: 0.85;
+  letter-spacing: -0.02em;
+  color: rgba(20,18,14,0.06);
+  user-select: none;
+  pointer-events: none;
+  font-weight: 400;
+}
+
+/* AI pulse */
+.ai-pulse {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 0 rgba(16,185,129,0.6);
+  animation: aiPulse 1.8s infinite;
+}
+@keyframes aiPulse {
+  0% { box-shadow: 0 0 0 0 rgba(16,185,129,0.5); }
+  70% { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
+  100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Utility */
+.muted { color: var(--ink-3); }
+.dim { color: var(--ink-4); }
+.row { display: flex; }
+.col { display: flex; flex-direction: column; }
+.gap-2 { gap: 8px; } .gap-3 { gap: 12px; } .gap-4 { gap: 16px; } .gap-5 { gap: 20px; } .gap-6 { gap: 24px; } .gap-8 { gap: 32px; }
+.center { display: flex; align-items: center; justify-content: center; }
+.between { display: flex; align-items: center; justify-content: space-between; }
+.items-center { align-items: center; }
+.flex-1 { flex: 1; }
+.full { width: 100%; }
+.grid { display: grid; }
+.h1 { font-size: 36px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+.h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
+.h3 { font-size: 18px; font-weight: 600; letter-spacing: -0.015em; }
+.eyebrow { text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px; font-weight: 600; color: var(--ink-4); }
+
+/* Density modes */
+[data-density="compact"] { --pad-3: 10px; --pad-4: 14px; --pad-5: 20px; }
+[data-density="cozy"]    { --pad-3: 16px; --pad-4: 24px; --pad-5: 32px; }
+
+/* canvas tone */
+[data-canvas="warm"]  { --bg: #F4F1EC; }
+[data-canvas="bone"]  { --bg: #FAFAF7; }
+[data-canvas="stone"] { --bg: #EDEAE3; }
+[data-canvas="linen"] { --bg: #F4F1ED; }
+
+/* Generic input */
+.input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 13.5px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color .18s, box-shadow .18s;
+}
+.input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+
+/* Tooltip-ish */
+.kbd {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  color: var(--ink-3);
+}
+
+/* divider */
+.hr { height: 1px; background: var(--line); border: none; }
+
+/* mini scroll fade */
+.scroll-fade {
+  mask-image: linear-gradient(180deg, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+}
