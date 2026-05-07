@@ -1,10 +1,10 @@
 import React from 'react'
-import { useConvexAuth } from 'convex/react'
 import { useClerk } from '@clerk/clerk-react'
 import App from './App'
+import { useCurrentUser } from './hooks/useCurrentUser'
 
 export default function AuthWrapper() {
-  const { isLoading } = useConvexAuth()
+  const { isLoading, isAuthenticated, user } = useCurrentUser()
   const { openSignIn, openSignUp } = useClerk()
 
   if (isLoading) return (
@@ -13,5 +13,5 @@ export default function AuthWrapper() {
     </div>
   )
 
-  return <App onSignIn={openSignIn} onSignUp={openSignUp}/>
+  return <App onSignIn={openSignIn} onSignUp={openSignUp} isAuthenticated={isAuthenticated} currentUser={user}/>
 }

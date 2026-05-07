@@ -40,7 +40,7 @@ const PROTECTED_PAGES = {
 };
 
 
-function App({ onSignIn, onSignUp }) {
+function App({ onSignIn, onSignUp, isAuthenticated = false, currentUser = null }) {
   const [route, setRoute] = useState(window.location.hash.slice(1) || 'landing');
   const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
 
@@ -53,6 +53,11 @@ function App({ onSignIn, onSignUp }) {
   useEffect(() => {
     window.location.hash = route;
   }, [route]);
+
+  useEffect(() => {
+    if (!isAuthenticated || route !== 'landing') return;
+    setRoute(currentUser?.onboardingComplete ? 'dashboard' : 'onboarding');
+  }, [isAuthenticated, currentUser?.onboardingComplete, route]);
 
   useEffect(() => {
     const a = ACCENTS[tweaks.accent] || ACCENTS['#003594'];
