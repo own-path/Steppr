@@ -18,6 +18,7 @@ function TasksPage() {
   const toast = useToast();
   const [cols, setCols] = useState({ backlog: [], progress: [], waiting: [], done: [], blocked: [] });
   const [newTask, setNewTask] = useState({ open: false, status: 'backlog', title: '', priority: 'med', due: '' });
+  const [filterMode, setFilterMode] = useState('all');
   const [saving, setSaving] = useState(false);
   const dragging = useRef(null);
   const { isMobile, isTablet, isDesktop } = useBreakpoint();
@@ -62,6 +63,23 @@ function TasksPage() {
 
   const PRIORITY = { high: 'var(--rose)', med: 'var(--amber)', low: 'var(--cyan)' };
   const openTaskForm = (status = 'backlog') => setNewTask({ open: true, status, title: '', priority: status === 'blocked' ? 'high' : 'med', due: '' });
+  const addGeneratedTask = async ({ title, status = 'backlog', priority = 'med', blocker }) => {
+    await createTask({ title, status, priority, blocker, weekKey: weekKeyFor() });
+  };
+  const breakdownTask = async () => {
+    const base = cols.progress[0] || cols.backlog[0];
+    if (!base) {
+      openTaskForm('backlog');
+      toast?.('Add a task first');
+      return;
+    }
+    await Promise.all([
+      addGeneratedTask({ title: `${base.title}: define next concrete step`, priority: base.priority || 'med' }),
+      addGeneratedTask({ title: `${base.title}: identify dependency or risk`, priority: 'med' }),
+      addGeneratedTask({ title: `${base.title}: send status update`, priority: 'low' }),
+    ]);
+    toast?.('Breakdown tasks added');
+  };
   const saveTask = async () => {
     const title = newTask.title.trim();
     if (!title || saving) return;
@@ -86,6 +104,40 @@ function TasksPage() {
     return <div className="center" style={{ minHeight: 'calc(100vh - 56px)' }}><div style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid var(--accent-soft)', borderTopColor: 'var(--accent)', animation: 'spin 0.7s linear infinite' }}/></div>
   }
 
+  const visibleEntries = Object.entries(cols).filter(([key]) => filterMode === 'all' || key !== 'done');
+  const aiActions = [
+    {
+      label: cols.progress[0] ? `Break down "${cols.progress[0].title}"` : 'Add an in-progress task to break down',
+      run: breakdownTask,
+    },
+    {
+      label: cols.blocked[0] ? `Escalate blocker: ${cols.blocked[0].title}` : 'No blocked tasks in Convex',
+      run: () => {
+        const blocked = cols.blocked[0];
+        if (!blocked) return toast?.('No blocked tasks to escalate');
+        navigator.clipboard?.writeText(`Blocked on: ${blocked.title}${blocked.blocker ? `\nContext: ${blocked.blocker}` : ''}`);
+        toast?.('Blocker summary copied');
+      },
+    },
+    {
+      label: cols.backlog[0] ? `Prioritize backlog: ${cols.backlog[0].title}` : 'Backlog is empty',
+      run: () => {
+        const task = cols.backlog[0];
+        if (!task) return toast?.('Backlog is empty');
+        updateTaskStatus({ taskId: task._id, status: 'progress', order: Date.now() });
+        toast?.('Moved top backlog task into progress');
+      },
+    },
+    {
+      label: 'Create reminder from selected task',
+      run: () => {
+        const task = cols.progress[0] || cols.backlog[0] || cols.blocked[0];
+        if (!task) return toast?.('No task available');
+        addGeneratedTask({ title: `Reminder: ${task.title}`, status: 'waiting', priority: task.priority || 'med' }).then(() => toast?.('Reminder task created'));
+      },
+    },
+  ];
+
   return (
     <div style={{ maxWidth: 1480, margin: '0 auto', padding: isMobile ? '20px 16px 0' : '32px 32px 0' }}>
       <div className="between" style={{ marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
@@ -94,8 +146,8 @@ function TasksPage() {
           <h1 className="h1" style={{ fontSize: isMobile ? 32 : 44 }}>This week's board</h1>
         </div>
         <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
-          {!isMobile && <button className="btn"><I.Filter size={14}/> Filter</button>}
-          {!isMobile && <button className="btn"><I.Spark size={14}/> AI breakdown</button>}
+          {!isMobile && <button className="btn" onClick={() => setFilterMode(mode => mode === 'all' ? 'active' : 'all')}><I.Filter size={14}/> {filterMode === 'all' ? 'Hide done' : 'Show all'}</button>}
+          {!isMobile && <button className="btn" onClick={breakdownTask}><I.Spark size={14}/> AI breakdown</button>}
           <button className="btn btn-accent" onClick={() => openTaskForm('backlog')}><I.Plus size={14}/> Add task</button>
         </div>
       </div>
@@ -130,7 +182,7 @@ function TasksPage() {
       {/* Desktop: 5-col grid; mobile/tablet: horizontal scroll flex */}
       {isDesktop ? (
         <div className="grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
-          {Object.entries(cols).map(([key, items]) => {
+            {visibleEntries.map(([key, items]) => {
             const meta = COL_META[key];
             return (
               <div key={key}
@@ -174,7 +226,7 @@ function TasksPage() {
         </div>
       ) : (
         <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 12 }}>
-          {Object.entries(cols).map(([key, items]) => {
+          {visibleEntries.map(([key, items]) => {
             const meta = COL_META[key];
             return (
               <div key={key}
@@ -224,13 +276,8 @@ function TasksPage() {
           <div className="eyebrow" style={{ color: 'var(--accent-2)' }}>AI actions</div>
         </div>
         <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
-          {[
-            cols.progress[0] ? `Break down "${cols.progress[0].title}"` : 'Add an in-progress task to break down',
-            cols.blocked[0] ? `Escalate blocker: ${cols.blocked[0].title}` : 'No blocked tasks in Convex',
-            cols.backlog[0] ? `Prioritize backlog: ${cols.backlog[0].title}` : 'Backlog is empty',
-            'Create reminder from selected task',
-          ].map(t => (
-            <button key={t} className="btn"><I.Spark size={12}/> {t}</button>
+          {aiActions.map(action => (
+            <button key={action.label} className="btn" onClick={action.run}><I.Spark size={12}/> {action.label}</button>
           ))}
         </div>
       </div>

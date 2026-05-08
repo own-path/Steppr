@@ -13,6 +13,8 @@ function WinsPage() {
   const createWin = useMutation(api.appData.createWin);
   const redetectAll = useMutation(api.appData.redetectAllDailyLogSignals);
   const [form, setForm] = useState({ open: false, title: '', detail: '', impact: 'Medium' });
+  const [tagFilter, setTagFilter] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const today = new Date();
@@ -37,6 +39,17 @@ function WinsPage() {
       setSaving(false);
     }
   };
+  const copyText = async (text, message) => {
+    await navigator.clipboard?.writeText(text);
+    toast(message);
+  };
+  const strengthen = (w) => `${w.title}\n\nImpact: ${w.detail}\nResult: ${w.impact} impact signal captured in Steppr.`;
+  const quantify = (w) => `${w.title}\nEvidence to quantify: time saved, users affected, revenue/risk reduced, quality improved.\nCurrent detail: ${w.detail}`;
+  const star = (w) => `Situation: Context for ${w.title}\nTask: What needed to happen\nAction: ${w.detail}\nResult: ${w.impact} impact`;
+  const resumeBullet = (w) => `- ${w.title}: ${w.detail}`;
+  const linkedInPost = (w) => `Small professional win: ${w.title}\n\n${w.detail}\n\nLogged with Steppr.`;
+  const tags = Array.from(new Set(wins.map(w => w.tag))).filter(Boolean).sort();
+  const displayedWins = tagFilter === 'all' ? wins : wins.filter(w => w.tag === tagFilter);
 
   const gridCols = isMobile ? '1fr' : 'repeat(2, 1fr)';
 
@@ -53,11 +66,24 @@ function WinsPage() {
           <div className="muted" style={{ fontSize: 14, marginTop: 6 }}>{wins.length} wins detected · {wins.filter(w => w.impact === 'High').length} high impact</div>
         </div>
         <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
-          {!isMobile && <button className="btn"><I.Filter size={14}/> By tag</button>}
+          {!isMobile && <button className="btn" onClick={() => setShowFilters(show => !show)}><I.Filter size={14}/> By tag</button>}
           {!isMobile && <button className="btn" onClick={() => redetectAll().then(r => toast(`Detected ${r.detectedWins} wins and ${r.detectedBlockers} blockers`))}><I.Spark size={14}/> Auto-detect new</button>}
           <button className="btn btn-accent" onClick={() => setForm(s => ({ ...s, open: true }))}><I.Plus size={14}/> Add win</button>
         </div>
       </div>
+
+      {showFilters && (
+        <div className="card" style={{ padding: 12, borderRadius: 8, marginBottom: 16 }}>
+          <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
+            {[{ tag: 'all', label: 'All tags' }, ...tags.map(tag => ({ tag, label: tag }))].map(item => (
+              <button key={item.tag} className="chip" onClick={() => setTagFilter(item.tag)}
+                style={{ background: tagFilter === item.tag ? 'var(--ink)' : 'var(--bg-2)', color: tagFilter === item.tag ? '#fff' : 'var(--ink-2)' }}>
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {form.open && (
         <div className="card" style={{ padding: 16, borderRadius: 8, marginBottom: 16 }}>
@@ -89,14 +115,14 @@ function WinsPage() {
         </div>
       )}
 
-      {wins.length === 0 ? (
+      {displayedWins.length === 0 ? (
         <div className="card" style={{ padding: 24, borderRadius: 8 }}>
-          <div className="h3">No wins in Convex yet.</div>
-          <div className="muted" style={{ marginTop: 6 }}>Log wins to populate this vault from the database.</div>
+          <div className="h3">{wins.length ? 'No wins match this filter.' : 'No wins in Convex yet.'}</div>
+          <div className="muted" style={{ marginTop: 6 }}>{wins.length ? 'Choose a different tag.' : 'Log wins to populate this vault from the database.'}</div>
         </div>
       ) : (
       <div className="grid" style={{ gridTemplateColumns: gridCols, gap: 16 }}>
-        {wins.map((w, i) => (
+        {displayedWins.map((w, i) => (
           <div key={w._id} className="card lift" style={{ padding: 24, position: 'relative', overflow: 'hidden' }}>
             <div className="font-pixel" style={{ position: 'absolute', right: -10, top: -20, fontSize: 80, color: 'rgba(0,53,148,0.07)' }}>W{String(i+1).padStart(2,'0')}</div>
             <div className="row items-center gap-2" style={{ marginBottom: 12 }}>
@@ -109,11 +135,11 @@ function WinsPage() {
             <div className="h3" style={{ marginBottom: 8 }}>{w.title}</div>
             <div style={{ fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.55, marginBottom: 18 }}>{w.detail}</div>
             <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
-              <button className="btn" onClick={(e) => { fireConfetti(e.clientX, e.clientY); toast('Rewriting…'); }}><I.Spark size={12}/> Rewrite stronger</button>
-              <button className="btn"><I.Bolt size={12}/> Quantify</button>
-              <button className="btn">STAR story</button>
-              <button className="btn"><I.Plus size={12}/> Resume</button>
-              {!isMobile && <button className="btn"><I.Plus size={12}/> LinkedIn</button>}
+              <button className="btn" onClick={(e) => { fireConfetti(e.clientX, e.clientY); copyText(strengthen(w), 'Stronger version copied'); }}><I.Spark size={12}/> Rewrite stronger</button>
+              <button className="btn" onClick={() => copyText(quantify(w), 'Quantification prompt copied')}><I.Bolt size={12}/> Quantify</button>
+              <button className="btn" onClick={() => copyText(star(w), 'STAR story copied')}>STAR story</button>
+              <button className="btn" onClick={() => copyText(resumeBullet(w), 'Resume bullet copied')}><I.Plus size={12}/> Resume</button>
+              {!isMobile && <button className="btn" onClick={() => copyText(linkedInPost(w), 'LinkedIn draft copied')}><I.Plus size={12}/> LinkedIn</button>}
             </div>
           </div>
         ))}

@@ -11,7 +11,15 @@ function WinsContent() {
   const { isMobile } = useBreakpoint();
   const wins = useQuery(api.appData.listWins);
   const redetectAll = useMutation(api.appData.redetectAllDailyLogSignals);
+  const [tagFilter, setTagFilter] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
   if (wins === undefined) return <div className="center" style={{ minHeight: 240 }}><div style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid var(--accent-soft)', borderTopColor: 'var(--accent)', animation: 'spin 0.7s linear infinite' }}/></div>
+  const tags = Array.from(new Set(wins.map(w => w.tag))).filter(Boolean).sort();
+  const displayedWins = tagFilter === 'all' ? wins : wins.filter(w => w.tag === tagFilter);
+  const copyText = async (text, message) => {
+    await navigator.clipboard?.writeText(text);
+    toast(message);
+  };
   return (
     <div>
       <div className="between" style={{ marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
@@ -21,13 +29,25 @@ function WinsContent() {
           <div className="muted" style={{ fontSize: 14, marginTop: 6 }}>{wins.length} wins detected · {wins.filter(w => w.impact === 'High').length} high impact</div>
         </div>
         <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
-          {!isMobile && <button className="btn"><I.Filter size={14}/> By tag</button>}
+          {!isMobile && <button className="btn" onClick={() => setShowFilters(show => !show)}><I.Filter size={14}/> By tag</button>}
           {!isMobile && <button className="btn" onClick={() => redetectAll().then(r => toast(`Detected ${r.detectedWins} wins and ${r.detectedBlockers} blockers`))}><I.Spark size={14}/> Auto-detect new</button>}
           <button className="btn btn-accent" onClick={() => toast('Use the main Wins page to add a manual win')}><I.Plus size={14}/> Add win</button>
         </div>
       </div>
+      {showFilters && (
+        <div className="card" style={{ padding: 12, borderRadius: 8, marginBottom: 16 }}>
+          <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
+            {[{ tag: 'all', label: 'All tags' }, ...tags.map(tag => ({ tag, label: tag }))].map(item => (
+              <button key={item.tag} className="chip" onClick={() => setTagFilter(item.tag)}
+                style={{ background: tagFilter === item.tag ? 'var(--ink)' : 'var(--bg-2)', color: tagFilter === item.tag ? '#fff' : 'var(--ink-2)' }}>
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="grid" style={{ gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 16 }}>
-        {wins.map((w, i) => (
+        {displayedWins.map((w, i) => (
           <div key={w._id} className="card lift" style={{ padding: 24, position: 'relative', overflow: 'hidden' }}>
             <div className="font-pixel" style={{ position: 'absolute', right: -10, top: -20, fontSize: 80, color: 'rgba(0,53,148,0.07)' }}>W{String(i+1).padStart(2,'0')}</div>
             <div className="row items-center gap-2" style={{ marginBottom: 12 }}>
@@ -40,10 +60,10 @@ function WinsContent() {
             <div className="h3" style={{ marginBottom: 8 }}>{w.title}</div>
             <div style={{ fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.55, marginBottom: 18 }}>{w.detail}</div>
             <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
-              <button className="btn" onClick={(e) => { fireConfetti(e.clientX, e.clientY); toast('Rewriting…'); }}><I.Spark size={12}/> Rewrite stronger</button>
-              <button className="btn"><I.Bolt size={12}/> Quantify</button>
-              <button className="btn">STAR story</button>
-              <button className="btn"><I.Plus size={12}/> Resume</button>
+              <button className="btn" onClick={(e) => { fireConfetti(e.clientX, e.clientY); copyText(`${w.title}\n\nImpact: ${w.detail}`, 'Stronger version copied'); }}><I.Spark size={12}/> Rewrite stronger</button>
+              <button className="btn" onClick={() => copyText(`${w.title}\nQuantify with: time saved, users affected, risk reduced, quality improved.\n${w.detail}`, 'Quantification prompt copied')}><I.Bolt size={12}/> Quantify</button>
+              <button className="btn" onClick={() => copyText(`Situation: Context for ${w.title}\nTask: What needed to happen\nAction: ${w.detail}\nResult: ${w.impact} impact`, 'STAR story copied')}>STAR story</button>
+              <button className="btn" onClick={() => copyText(`- ${w.title}: ${w.detail}`, 'Resume bullet copied')}><I.Plus size={12}/> Resume</button>
             </div>
           </div>
         ))}
@@ -61,6 +81,10 @@ function DailyLogPage() {
   const [learned, setLearned] = useState("");
   const [blocked, setBlocked] = useState("");
   const [winsToday, setWinsToday] = useState("");
+  const [activePrompt, setActivePrompt] = useState('Reflection');
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [saving, setSaving] = useState(false);
+  const [listening, setListening] = useState(false);
   const toast = useToast();
   const { isMobile, isTablet, isDesktop } = useBreakpoint();
   const logs = useQuery(api.appData.listDailyLogs);
@@ -68,8 +92,13 @@ function DailyLogPage() {
   const today = new Date();
   const todayLabel = today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
   const todayIso = today.toISOString().slice(0, 10);
-  const monthLabel = today.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-  const loggedDays = new Set((logs || []).map(log => Number(log.date.slice(8, 10))));
+  const monthLabel = calendarDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  const loggedDays = new Set((logs || [])
+    .filter(log => {
+      const d = new Date(`${log.date}T00:00:00`);
+      return d.getMonth() === calendarDate.getMonth() && d.getFullYear() === calendarDate.getFullYear();
+    })
+    .map(log => Number(log.date.slice(8, 10))));
   const weekKey = `${today.getFullYear()}-W${Math.ceil((((today - new Date(today.getFullYear(), 0, 1)) / 86400000) + new Date(today.getFullYear(), 0, 1).getDay() + 1) / 7)}`;
 
   const days = ['M','T','W','T','F','S','S'];
@@ -77,6 +106,48 @@ function DailyLogPage() {
   // Layout: desktop = 3-col, tablet = 2-col (no calendar), mobile = 1-col (no calendar)
   const showCalendar = isDesktop;
   const gridCols = isDesktop ? '280px 1fr 320px' : isTablet ? '1fr 280px' : '1fr';
+  const monthStart = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1);
+  const monthDays = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0).getDate();
+  const leadingBlanks = (monthStart.getDay() + 6) % 7;
+  const calendarCells = Array.from({ length: Math.ceil((leadingBlanks + monthDays) / 7) * 7 }, (_, i) => i - leadingBlanks + 1);
+  const changeMonth = (delta) => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() + delta, 1));
+  const startVoice = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast('Voice input is not supported in this browser');
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => toast('Voice capture failed');
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results).map(result => result[0]?.transcript || '').join(' ').trim();
+      if (transcript) setText(current => [current, transcript].filter(Boolean).join('\n'));
+    };
+    recognition.start();
+  };
+  const saveEntry = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const result = await saveDailyLog({
+        date: todayIso,
+        weekKey,
+        reflection: text,
+        learned,
+        blockers: blocked ? blocked.split('\n').filter(Boolean) : [],
+        wins: winsToday ? winsToday.split('\n').filter(Boolean) : [],
+        mood,
+        energy,
+      });
+      toast(`Saved · ${result.detectedWins} wins · ${result.detectedBlockers} blockers`);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div style={{ maxWidth: 1480, margin: '0 auto', padding: isMobile ? '20px 16px 0' : '32px 32px 0' }}>
@@ -101,20 +172,9 @@ function DailyLogPage() {
           <h1 className="h1" style={{ fontSize: isMobile ? 32 : 44 }}>Daily reflection</h1>
         </div>
         <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
-          <button className="btn"><I.Calendar size={14}/> {today.toLocaleDateString(undefined, { month: 'long' })}</button>
-          {!isMobile && <button className="btn"><I.Mic size={14}/> Voice</button>}
-          <button className="btn btn-accent" onClick={() => {
-            saveDailyLog({
-              date: todayIso,
-              weekKey,
-              reflection: text,
-              learned,
-              blockers: blocked ? blocked.split('\n').filter(Boolean) : [],
-              wins: winsToday ? winsToday.split('\n').filter(Boolean) : [],
-              mood,
-              energy,
-            }).then((result) => toast(`Saved · ${result.detectedWins} wins · ${result.detectedBlockers} blockers`))
-          }}>Save entry</button>
+          <button className="btn" onClick={() => setCalendarDate(new Date())}><I.Calendar size={14}/> {today.toLocaleDateString(undefined, { month: 'long' })}</button>
+          {!isMobile && <button className="btn" onClick={startVoice}><I.Mic size={14}/> {listening ? 'Listening' : 'Voice'}</button>}
+          <button className="btn btn-accent" onClick={saveEntry} disabled={saving}>{saving ? 'Saving...' : 'Save entry'}</button>
         </div>
       </div>
 
@@ -126,27 +186,26 @@ function DailyLogPage() {
               <div className="between" style={{ marginBottom: 12 }}>
                 <div style={{ fontWeight: 600 }}>{monthLabel}</div>
                 <div className="row gap-1">
-                  <button className="btn btn-ghost" style={{ padding: 4, borderRadius: 8 }}><I.Chevron size={14}/></button>
-                  <button className="btn btn-ghost" style={{ padding: 4, borderRadius: 8 }}><I.Chevron size={14}/></button>
+                  <button className="btn btn-ghost" onClick={() => changeMonth(-1)} style={{ padding: 4, borderRadius: 8 }}><I.Chevron size={14}/></button>
+                  <button className="btn btn-ghost" onClick={() => changeMonth(1)} style={{ padding: 4, borderRadius: 8, transform: 'rotate(180deg)' }}><I.Chevron size={14}/></button>
                 </div>
               </div>
               <div className="grid" style={{ gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, fontSize: 11, color: 'var(--ink-4)', marginBottom: 6 }}>
                 {days.map((d, i) => <div key={i} style={{ textAlign: 'center' }}>{d}</div>)}
               </div>
               <div className="grid" style={{ gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-                {Array.from({length: 35}).map((_, i) => {
-                  const day = i - 1;
-                  const isToday = day === today.getDate();
+                {calendarCells.map((day, i) => {
+                  const isToday = day === today.getDate() && calendarDate.getMonth() === today.getMonth() && calendarDate.getFullYear() === today.getFullYear();
                   const hasEntry = loggedDays.has(day);
                   return (
                     <div key={i} style={{
                       aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 12, borderRadius: 8, position: 'relative',
                       background: isToday ? 'var(--ink)' : (hasEntry ? 'var(--accent-tint)' : 'transparent'),
-                      color: isToday ? '#fff' : (day > 0 && day <= 30 ? 'var(--ink)' : 'var(--ink-5)'),
+                      color: isToday ? '#fff' : (day > 0 && day <= monthDays ? 'var(--ink)' : 'var(--ink-5)'),
                       fontWeight: isToday ? 600 : 400, cursor: 'pointer'
                     }}>
-                      {day > 0 && day <= 30 ? day : ''}
+                      {day > 0 && day <= monthDays ? day : ''}
                       {hasEntry && !isToday && <span style={{ position: 'absolute', bottom: 3, width: 3, height: 3, borderRadius: 999, background: 'var(--accent)' }}></span>}
                     </div>
                   );
@@ -173,8 +232,8 @@ function DailyLogPage() {
         {/* CENTER: composer */}
         <div className="card" style={{ padding: 28 }}>
           <div className="row gap-2" style={{ marginBottom: 18, flexWrap: 'wrap' }}>
-            {['Reflection','Quick log','Standup notes','Win','Blocker'].map((t,i) => (
-              <button key={t} className="chip" style={{ cursor: 'pointer', background: i === 0 ? 'var(--ink)' : 'var(--bg-2)', color: i === 0 ? '#fff' : 'var(--ink-2)', borderColor: i === 0 ? 'var(--ink)' : 'var(--line)' }}>{t}</button>
+            {['Reflection','Quick log','Standup notes','Win','Blocker'].map((t) => (
+              <button key={t} onClick={() => setActivePrompt(t)} className="chip" style={{ cursor: 'pointer', background: activePrompt === t ? 'var(--ink)' : 'var(--bg-2)', color: activePrompt === t ? '#fff' : 'var(--ink-2)', borderColor: activePrompt === t ? 'var(--ink)' : 'var(--line)' }}>{t}</button>
             ))}
           </div>
 
