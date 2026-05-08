@@ -43,7 +43,7 @@ function AnalyticsPage() {
   const I = Icons
   const { isMobile, isTablet } = useBreakpoint()
   const wins = useQuery(api.appData.listWins)
-  const tasks = useQuery(api.appData.listTasks)
+  const tasks = useQuery(api.appData.listTasks, {})
   const logs = useQuery(api.appData.listDailyLogs)
   const scores = useQuery(api.appData.listGrowthScores)
   const reports = useQuery(api.appData.listReports)

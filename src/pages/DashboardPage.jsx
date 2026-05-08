@@ -10,6 +10,11 @@ function PixelLockup({ text, style }) {
   return <div className="pixel-display" style={style}>{text}</div>;
 }
 
+function weekKeyFor(date = new Date()) {
+  const start = new Date(date.getFullYear(), 0, 1);
+  return `${date.getFullYear()}-W${Math.ceil((((date - start) / 86400000) + start.getDay() + 1) / 7)}`;
+}
+
 function StatCard({ icon, label, value, suffix = '', delta, color = 'var(--accent)', spark }) {
   const I = Icons;
   const Ic = I[icon];
@@ -162,7 +167,7 @@ function DashboardPage() {
   const { user } = useCurrentUser();
   const wins = useQuery(api.appData.listWins);
   const scores = useQuery(api.appData.listGrowthScores);
-  const tasks = useQuery(api.appData.listTasks);
+  const tasks = useQuery(api.appData.listTasks, {});
   const logs = useQuery(api.appData.listDailyLogs);
 
   if (wins === undefined || scores === undefined || tasks === undefined || logs === undefined) {
@@ -172,10 +177,14 @@ function DashboardPage() {
   const statCols = isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)';
   const mainCols = isDesktop ? '1.4fr 1fr' : '1fr';
   const bottomCols = isMobile ? '1fr' : isTablet ? '1fr 1fr' : '1.2fr 1fr 1fr';
-  const openTasks = tasks.filter(t => !['done', 'blocked'].includes(t.status)).slice(0, 3);
-  const blockedTasks = tasks.filter(t => t.status === 'blocked').length;
+  const currentWeek = weekKeyFor();
+  const weekWins = wins.filter(w => w.weekKey === currentWeek);
+  const weekLogs = logs.filter(log => log.weekKey === currentWeek);
+  const weekTasks = tasks.filter(task => task.weekKey === currentWeek || !task.weekKey);
+  const openTasks = weekTasks.filter(t => !['done', 'blocked'].includes(t.status)).slice(0, 3);
+  const blockedTasks = weekTasks.filter(t => t.status === 'blocked').length;
   const avgScore = scores.length ? Math.round(scores.reduce((sum, s) => sum + s.value, 0) / scores.length) : 0;
-  const learningLogs = logs.filter(log => log.learned).length;
+  const learningLogs = weekLogs.filter(log => log.learned).length;
 
   return (
     <div style={{ maxWidth: 1480, margin: '0 auto', padding: isMobile ? '20px 16px 0' : '32px 32px 0' }}>
@@ -185,7 +194,7 @@ function DashboardPage() {
         <div className="eyebrow" style={{ marginBottom: 8, color: 'var(--accent-2)' }}>Current week · Database backed</div>
         <h1 className="h1" style={{ fontSize: isMobile ? 'clamp(28px,6vw,36px)' : 'clamp(36px, 4.4vw, 56px)', maxWidth: 720 }}>
           Welcome back, {user?.name?.split(' ')[0] || 'there'}.<br/>
-          <span style={{ color: 'var(--ink-4)' }}>You shipped {wins.length} wins this week.</span>
+          <span style={{ color: 'var(--ink-4)' }}>You shipped {weekWins.length} wins this week.</span>
         </h1>
         <div className="row gap-2" style={{ marginTop: 20, flexWrap: 'wrap' }}>
           <button className="btn btn-accent"><I.Plus size={14}/> Log today</button>
@@ -197,9 +206,9 @@ function DashboardPage() {
       {/* Stat row */}
       <div className="grid" style={{ gridTemplateColumns: statCols, gap: 16, marginBottom: 16 }}>
         <StatCard icon="Bolt" label="Momentum" value={avgScore} suffix="" color="#003594" spark={scores[0]?.series || [avgScore]}/>
-        <StatCard icon="Flame" label="Logs captured" value={logs.length} color="#F59E0B" spark={logs.length ? logs.map((_, i) => i + 1).slice(-8) : [0]}/>
-        <StatCard icon="Trophy" label="Wins this week" value={wins.length} color="#8B5CF6" spark={wins.length ? wins.map((_, i) => i + 1).slice(-8) : [0]}/>
-        <StatCard icon="Brain" label="Learnings" value={learningLogs} color="#4F46E5" spark={learningLogs ? logs.filter(l => l.learned).map((_, i) => i + 1).slice(-8) : [0]}/>
+        <StatCard icon="Flame" label="Logs captured" value={weekLogs.length} color="#F59E0B" spark={weekLogs.length ? weekLogs.map((_, i) => i + 1).slice(-8) : [0]}/>
+        <StatCard icon="Trophy" label="Wins this week" value={weekWins.length} color="#8B5CF6" spark={weekWins.length ? weekWins.map((_, i) => i + 1).slice(-8) : [0]}/>
+        <StatCard icon="Brain" label="Learnings" value={learningLogs} color="#4F46E5" spark={learningLogs ? weekLogs.filter(l => l.learned).map((_, i) => i + 1).slice(-8) : [0]}/>
       </div>
 
       {/* Main grid */}
@@ -278,7 +287,7 @@ function DashboardPage() {
             <div className="eyebrow" style={{ color: 'rgba(255,255,255,0.6)' }}>AI insight</div>
           </div>
           <div style={{ fontSize: 18, fontWeight: 500, lineHeight: 1.4, letterSpacing: '-0.015em' }}>
-            {logs.length ? `You have ${logs.length} log${logs.length === 1 ? '' : 's'}, ${wins.length} win${wins.length === 1 ? '' : 's'}, and ${blockedTasks} blocker${blockedTasks === 1 ? '' : 's'} in Convex for this profile.` : 'No daily logs are in Convex for this profile yet.'}
+            {weekLogs.length ? `You have ${weekLogs.length} log${weekLogs.length === 1 ? '' : 's'}, ${weekWins.length} win${weekWins.length === 1 ? '' : 's'}, and ${blockedTasks} blocker${blockedTasks === 1 ? '' : 's'} in Convex for this profile this week.` : 'No daily logs are in Convex for this profile this week yet.'}
           </div>
           <div className="row gap-2" style={{ marginTop: 18 }}>
             <button className="btn" style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', borderColor: 'rgba(255,255,255,0.18)' }}>Why?</button>

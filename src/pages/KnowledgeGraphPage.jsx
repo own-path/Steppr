@@ -14,7 +14,7 @@ function KnowledgeGraphPage() {
   const { isMobile, isTablet } = useBreakpoint()
   const { user } = useCurrentUser()
   const wins = useQuery(api.appData.listWins)
-  const tasks = useQuery(api.appData.listTasks)
+  const tasks = useQuery(api.appData.listTasks, {})
   const logs = useQuery(api.appData.listDailyLogs)
   const [selected, setSelected] = useState(null)
 

@@ -1,5 +1,5 @@
-import React from 'react'
-import { useQuery } from 'convex/react'
+import React, { useState } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import Icons from '../components/Icons'
 import { useToast, fireConfetti } from '../components/Primitives'
@@ -10,6 +10,33 @@ function WinsPage() {
   const toast = useToast();
   const { isMobile, isTablet } = useBreakpoint();
   const wins = useQuery(api.appData.listWins);
+  const createWin = useMutation(api.appData.createWin);
+  const redetectAll = useMutation(api.appData.redetectAllDailyLogSignals);
+  const [form, setForm] = useState({ open: false, title: '', detail: '', impact: 'Medium' });
+  const [saving, setSaving] = useState(false);
+
+  const today = new Date();
+  const start = new Date(today.getFullYear(), 0, 1);
+  const weekKey = `${today.getFullYear()}-W${Math.ceil((((today - start) / 86400000) + start.getDay() + 1) / 7)}`;
+  const todayIso = today.toISOString().slice(0, 10);
+  const saveWin = async () => {
+    const title = form.title.trim();
+    if (!title || saving) return;
+    setSaving(true);
+    try {
+      await createWin({
+        title,
+        detail: form.detail.trim() || title,
+        date: todayIso,
+        weekKey,
+        impact: form.impact,
+      });
+      setForm({ open: false, title: '', detail: '', impact: 'Medium' });
+      toast('Win added');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const gridCols = isMobile ? '1fr' : 'repeat(2, 1fr)';
 
@@ -27,10 +54,40 @@ function WinsPage() {
         </div>
         <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
           {!isMobile && <button className="btn"><I.Filter size={14}/> By tag</button>}
-          {!isMobile && <button className="btn"><I.Spark size={14}/> Auto-detect new</button>}
-          <button className="btn btn-accent"><I.Plus size={14}/> Add win</button>
+          {!isMobile && <button className="btn" onClick={() => redetectAll().then(r => toast(`Detected ${r.detectedWins} wins and ${r.detectedBlockers} blockers`))}><I.Spark size={14}/> Auto-detect new</button>}
+          <button className="btn btn-accent" onClick={() => setForm(s => ({ ...s, open: true }))}><I.Plus size={14}/> Add win</button>
         </div>
       </div>
+
+      {form.open && (
+        <div className="card" style={{ padding: 16, borderRadius: 8, marginBottom: 16 }}>
+          <div className="grid" style={{ gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) 180px auto', gap: 10, alignItems: 'center' }}>
+            <input
+              className="input"
+              autoFocus
+              value={form.title}
+              onChange={e => setForm(s => ({ ...s, title: e.target.value }))}
+              onKeyDown={e => { if (e.key === 'Enter') saveWin(); if (e.key === 'Escape') setForm(s => ({ ...s, open: false })); }}
+              placeholder="Win title"
+            />
+            <select className="input" value={form.impact} onChange={e => setForm(s => ({ ...s, impact: e.target.value }))}>
+              <option value="High">High impact</option>
+              <option value="Medium">Medium impact</option>
+              <option value="Low">Low impact</option>
+            </select>
+            <div className="row gap-2">
+              <button className="btn btn-accent" onClick={saveWin} disabled={saving || !form.title.trim()}><I.Check size={14}/> {saving ? 'Saving' : 'Save'}</button>
+              <button className="btn" onClick={() => setForm(s => ({ ...s, open: false }))}>Cancel</button>
+            </div>
+          </div>
+          <textarea
+            value={form.detail}
+            onChange={e => setForm(s => ({ ...s, detail: e.target.value }))}
+            placeholder="Optional detail/evidence"
+            style={{ width: '100%', minHeight: 72, marginTop: 10, border: '1px solid var(--line)', borderRadius: 8, padding: 12, resize: 'vertical', background: 'var(--surface-2)', color: 'var(--ink)' }}
+          />
+        </div>
+      )}
 
       {wins.length === 0 ? (
         <div className="card" style={{ padding: 24, borderRadius: 8 }}>

@@ -10,6 +10,7 @@ function WinsContent() {
   const toast = useToast();
   const { isMobile } = useBreakpoint();
   const wins = useQuery(api.appData.listWins);
+  const redetectAll = useMutation(api.appData.redetectAllDailyLogSignals);
   if (wins === undefined) return <div className="center" style={{ minHeight: 240 }}><div style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid var(--accent-soft)', borderTopColor: 'var(--accent)', animation: 'spin 0.7s linear infinite' }}/></div>
   return (
     <div>
@@ -21,8 +22,8 @@ function WinsContent() {
         </div>
         <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
           {!isMobile && <button className="btn"><I.Filter size={14}/> By tag</button>}
-          {!isMobile && <button className="btn"><I.Spark size={14}/> Auto-detect new</button>}
-          <button className="btn btn-accent"><I.Plus size={14}/> Add win</button>
+          {!isMobile && <button className="btn" onClick={() => redetectAll().then(r => toast(`Detected ${r.detectedWins} wins and ${r.detectedBlockers} blockers`))}><I.Spark size={14}/> Auto-detect new</button>}
+          <button className="btn btn-accent" onClick={() => toast('Use the main Wins page to add a manual win')}><I.Plus size={14}/> Add win</button>
         </div>
       </div>
       <div className="grid" style={{ gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 16 }}>
@@ -112,7 +113,7 @@ function DailyLogPage() {
               wins: winsToday ? winsToday.split('\n').filter(Boolean) : [],
               mood,
               energy,
-            }).then(() => toast('Saved to your log'))
+            }).then((result) => toast(`Saved · ${result.detectedWins} wins · ${result.detectedBlockers} blockers`))
           }}>Save entry</button>
         </div>
       </div>

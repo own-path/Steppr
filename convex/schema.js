@@ -32,6 +32,8 @@ export default defineSchema({
     .index("by_user_date", ["userId", "date"]),
   wins: defineTable({
     userId: v.id("users"),
+    sourceLogId: v.optional(v.id("dailyLogs")),
+    source: v.optional(v.string()),
     title: v.string(),
     detail: v.string(),
     date: v.string(),
@@ -44,6 +46,9 @@ export default defineSchema({
     .index("by_user_week", ["userId", "weekKey"]),
   tasks: defineTable({
     userId: v.id("users"),
+    sourceLogId: v.optional(v.id("dailyLogs")),
+    source: v.optional(v.string()),
+    weekKey: v.optional(v.string()),
     title: v.string(),
     tag: v.string(),
     due: v.optional(v.string()),
@@ -54,7 +59,8 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_user", ["userId"])
-    .index("by_user_status", ["userId", "status"]),
+    .index("by_user_status", ["userId", "status"])
+    .index("by_user_week", ["userId", "weekKey"]),
   growthScores: defineTable({
     userId: v.id("users"),
     key: v.string(),

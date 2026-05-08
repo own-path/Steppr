@@ -2,13 +2,23 @@ import React, { useEffect, useState, useRef } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import Icons from '../components/Icons'
+import { useToast } from '../components/Primitives'
 import { useBreakpoint } from '../hooks/useBreakpoint'
+
+function weekKeyFor(date = new Date()) {
+  const start = new Date(date.getFullYear(), 0, 1);
+  return `${date.getFullYear()}-W${Math.ceil((((date - start) / 86400000) + start.getDay() + 1) / 7)}`;
+}
 
 function TasksPage() {
   const I = Icons;
-  const tasks = useQuery(api.appData.listTasks);
+  const tasks = useQuery(api.appData.listTasks, {});
   const updateTaskStatus = useMutation(api.appData.updateTaskStatus);
+  const createTask = useMutation(api.appData.createTask);
+  const toast = useToast();
   const [cols, setCols] = useState({ backlog: [], progress: [], waiting: [], done: [], blocked: [] });
+  const [newTask, setNewTask] = useState({ open: false, status: 'backlog', title: '', priority: 'med', due: '' });
+  const [saving, setSaving] = useState(false);
   const dragging = useRef(null);
   const { isMobile, isTablet, isDesktop } = useBreakpoint();
 
@@ -51,6 +61,26 @@ function TasksPage() {
   };
 
   const PRIORITY = { high: 'var(--rose)', med: 'var(--amber)', low: 'var(--cyan)' };
+  const openTaskForm = (status = 'backlog') => setNewTask({ open: true, status, title: '', priority: status === 'blocked' ? 'high' : 'med', due: '' });
+  const saveTask = async () => {
+    const title = newTask.title.trim();
+    if (!title || saving) return;
+    setSaving(true);
+    try {
+      await createTask({
+        title,
+        status: newTask.status,
+        priority: newTask.priority,
+        due: newTask.due || undefined,
+        weekKey: weekKeyFor(),
+        blocker: newTask.status === 'blocked' ? title : undefined,
+      });
+      setNewTask(s => ({ ...s, open: false, title: '' }));
+      toast?.('Task added');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (tasks === undefined) {
     return <div className="center" style={{ minHeight: 'calc(100vh - 56px)' }}><div style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid var(--accent-soft)', borderTopColor: 'var(--accent)', animation: 'spin 0.7s linear infinite' }}/></div>
@@ -66,9 +96,36 @@ function TasksPage() {
         <div className="row gap-2" style={{ flexWrap: 'wrap' }}>
           {!isMobile && <button className="btn"><I.Filter size={14}/> Filter</button>}
           {!isMobile && <button className="btn"><I.Spark size={14}/> AI breakdown</button>}
-          <button className="btn btn-accent"><I.Plus size={14}/> Add task</button>
+          <button className="btn btn-accent" onClick={() => openTaskForm('backlog')}><I.Plus size={14}/> Add task</button>
         </div>
       </div>
+
+      {newTask.open && (
+        <div className="card" style={{ padding: 16, marginBottom: 16, borderRadius: 8 }}>
+          <div className="grid" style={{ gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) 150px 140px auto', gap: 10, alignItems: 'center' }}>
+            <input
+              className="input"
+              autoFocus
+              value={newTask.title}
+              onChange={e => setNewTask(s => ({ ...s, title: e.target.value }))}
+              onKeyDown={e => { if (e.key === 'Enter') saveTask(); if (e.key === 'Escape') setNewTask(s => ({ ...s, open: false })); }}
+              placeholder="Task title"
+            />
+            <select className="input" value={newTask.status} onChange={e => setNewTask(s => ({ ...s, status: e.target.value }))}>
+              {Object.keys(COL_META).map(status => <option key={status} value={status}>{COL_META[status].title}</option>)}
+            </select>
+            <select className="input" value={newTask.priority} onChange={e => setNewTask(s => ({ ...s, priority: e.target.value }))}>
+              <option value="high">High</option>
+              <option value="med">Medium</option>
+              <option value="low">Low</option>
+            </select>
+            <div className="row gap-2">
+              <button className="btn btn-accent" onClick={saveTask} disabled={saving || !newTask.title.trim()}><I.Check size={14}/> {saving ? 'Saving' : 'Save'}</button>
+              <button className="btn" onClick={() => setNewTask(s => ({ ...s, open: false }))}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Desktop: 5-col grid; mobile/tablet: horizontal scroll flex */}
       {isDesktop ? (
@@ -87,7 +144,7 @@ function TasksPage() {
                     <span style={{ fontWeight: 600, fontSize: 13 }}>{meta.title}</span>
                     <span className="chip" style={{ background: meta.bg, color: meta.color, borderColor: 'transparent' }}>{items.length}</span>
                   </div>
-                  <button className="btn btn-ghost" style={{ padding: 4, borderRadius: 6 }}><I.Plus size={12}/></button>
+                  <button className="btn btn-ghost" onClick={() => openTaskForm(key)} style={{ padding: 4, borderRadius: 6 }}><I.Plus size={12}/></button>
                 </div>
                 <div className="col gap-2">
                   {items.map(t => (
@@ -131,7 +188,7 @@ function TasksPage() {
                     <span style={{ fontWeight: 600, fontSize: 13 }}>{meta.title}</span>
                     <span className="chip" style={{ background: meta.bg, color: meta.color, borderColor: 'transparent' }}>{items.length}</span>
                   </div>
-                  <button className="btn btn-ghost" style={{ padding: 4, borderRadius: 6 }}><I.Plus size={12}/></button>
+                  <button className="btn btn-ghost" onClick={() => openTaskForm(key)} style={{ padding: 4, borderRadius: 6 }}><I.Plus size={12}/></button>
                 </div>
                 <div className="col gap-2">
                   {items.map(t => (
