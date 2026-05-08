@@ -55,7 +55,7 @@ function buildPrintableHtml(r, variant, draft, user) {
   </style>
 </head>
 <body>
-  <div class="meta">${r.week.toUpperCase()} · ${m ? 'FOR MAYA' : 'PRIVATE'}</div>
+  <div class="meta">${r.week.toUpperCase()} · ${m ? 'MANAGER VERSION' : 'PRIVATE'}</div>
   <h1>${m ? 'Weekly review' : 'My honest week'}</h1>
   <div class="meta">${draft.dates} · ${name} · ${role}</div>
   <div class="stats">
@@ -78,15 +78,9 @@ function buildLatex(r, wins, variant, draft, user) {
   const name = user?.name || 'Current user'
   const role = user?.role || 'Role not set'
   const winItems = draft ? draftLines(draft.wins) : wins.slice(0,3).map(w => `\\textbf{${w.title}} --- ${w.detail}`)
-  const learningItems = draft ? draftLines(draft.learnings) : (m
-    ? ['Profile \\emph{before} optimizing.', 'Multi-doc evals need separate axes.', 'RFCs surface hidden assumptions faster.']
-    : ['I keep optimizing the wrong thing.', 'The doubt is the slowest part of my week.', 'Public writing is how I get in the rooms I want.'])
-  const blockerItems = draft ? draftLines(draft.blockers) : (m
-    ? ['Cluster quota (8xA100) --- IT ticket open. \\textbf{Can you nudge?}', 'Eval set v3 --- pending legal.']
-    : ["Comparing myself to Jonas. He's been here 3 years.", "Cluster quota felt like proof I don't matter yet."])
-  const nextItems = draft ? draftLines(draft.next) : (m
-    ? ['Ship LoRA sweep once cluster unblocks.', 'Pair with Jonas on the RFC.', 'Volunteer for Thursday review.']
-    : ['No laptop after 10pm.', 'Ask one dumb question per standup.', 'Send Maya the manager version.'])
+  const learningItems = draft ? draftLines(draft.learnings) : []
+  const blockerItems = draft ? draftLines(draft.blockers) : []
+  const nextItems = draft ? draftLines(draft.next) : []
   return `\\documentclass[11pt,a4paper]{article}
 \\usepackage[margin=1in]{geometry}
 \\usepackage{xcolor,titlesec,enumitem}
@@ -96,7 +90,7 @@ function buildLatex(r, wins, variant, draft, user) {
 \\setlist{leftmargin=*,itemsep=2pt}
 \\begin{document}\\pagestyle{empty}
 % ${m ? 'MANAGER VERSION' : 'PERSONAL — private'}
-{\\color{accent}\\textbf{${r.week.toUpperCase()} · ${m ? 'FOR MAYA' : 'PRIVATE'}}}\\\\[2pt]
+{\\color{accent}\\textbf{${r.week.toUpperCase()} · ${m ? 'MANAGER VERSION' : 'PRIVATE'}}}\\\\[2pt]
 {\\huge\\bfseries ${m ? 'Weekly review' : 'My honest week'}}\\\\[4pt]
 {\\color{muted}\\small ${(draft?.dates || r.dates)} · ${name} · ${role}}\\\\[10pt]
 \\noindent\\fbox{\\parbox{\\textwidth}{
@@ -135,59 +129,25 @@ function buildMarkdownSource(r, variant, draft) {
     `wins: ${r.wins}`,
     `learnings: ${r.learnings}`,
     `blockers: ${r.blockers}`,
-    ...(m ? [] : ['mood: 7.4']),
     `variant: ${variant}`,
     '---',
     '',
-    ...(m ? [] : ['<!-- Private — Maya never sees this. Be honest. -->', '']),
+    ...(m ? [] : ['<!-- Private version. Be honest. -->', '']),
     `## ${m ? 'Top Wins' : 'What Felt Good'}`,
     '',
-    ...(draft ? section(draft.wins) : [
-      '- **Eval pipeline** — Parallel worker pool: 4h → 22min. Tokenizer was the bottleneck.',
-      '- **LoRA sweep** — 3B param fine-tuning experiments with full mentor sign-off.',
-      '- **RFC shipped** — First solo architecture document. Zero revision requests.',
-    ]),
+    ...section(draft?.wins),
     '',
     `## ${m ? 'What I Learned' : 'The Messy Version'}`,
     '',
-    ...(draft ? section(draft.learnings) : m
-      ? [
-          '- Profile *before* optimizing — the bottleneck is rarely where you assume.',
-          '- Multi-doc retrieval evals need separate latency + accuracy axes.',
-          '- RFCs surface hidden assumptions faster than DMs to senior staff.',
-        ]
-      : [
-          "- I keep optimizing the wrong thing first. Ego protects me from the real work.",
-          "- I'm faster than I think; the *doubt* is the slowest part of my week.",
-          "- Public writing scares me, but it's how I get in the rooms I want.",
-        ]),
+    ...section(draft?.learnings),
     '',
     `## ${m ? 'What Blocked Me' : 'What Stuck'}`,
     '',
-    ...(draft ? section(draft.blockers) : m
-      ? [
-          '- Cluster quota (8×A100) — IT ticket open since Tuesday. **Can you nudge?**',
-          '- Eval set v3 access — pending legal review.',
-        ]
-      : [
-          '- Comparing myself to Jonas. He has been here 3 years. I am 5 weeks in.',
-          "- Cluster quota felt like proof I don't matter yet. (I know that's not true.)",
-          '- Slept 5h Tuesday. Recipe for next-day regret.',
-        ]),
+    ...section(draft?.blockers),
     '',
     `## ${m ? 'Next Week' : 'Promises to Myself'}`,
     '',
-    ...(draft ? draftLines(draft.next).map((item, i) => `${i + 1}. ${item}`) : m
-      ? [
-          '1. Ship LoRA sweep results once cluster unblocks.',
-          '2. Pair with Jonas on the streaming token-budget RFC.',
-          "3. Volunteer to present at Thursday's research review.",
-        ]
-      : [
-          '1. No laptop after 10pm. Real sleep is a feature, not a bug.',
-          '2. Ask one "dumb" question per standup. Out loud.',
-          "3. Send Maya the manager version. She doesn't need the rest.",
-        ]),
+    ...draftLines(draft?.next).map((item, i) => `${i + 1}. ${item}`),
   ].join('\n')
 }
 
@@ -331,15 +291,9 @@ function DocumentPreview({ r, variant, draft, user, wins = [], fixed = false }) 
   const name = user?.name || 'Current user'
   const role = user?.role || 'Role not set'
   const winItems = draftLines(draft?.wins, wins.slice(0, 3).map(w => `${w.title}: ${w.detail}`))
-  const learningItems = draft?.learnings !== undefined ? draftLines(draft.learnings) : (m
-    ? ['Profile before optimizing — the bottleneck is rarely where you assume.', 'Multi-doc retrieval evals need separate latency + accuracy axes.', 'Writing RFCs surfaces hidden assumptions faster than DMing senior staff.']
-    : ['I keep optimizing the wrong thing first — ego protects me from the real work.', "I'm faster than I think; the doubt is the slowest part of my week.", "Public writing scares me, but it's how I get pulled into the rooms I want."])
-  const blockerItems = draft?.blockers !== undefined ? draftLines(draft.blockers) : (m
-    ? ['Cluster quota for the 8xA100 sweep — IT ticket open since Tuesday. Asking: can you nudge?', 'Eval set v3 access — pending legal review.']
-    : ["Comparing myself to Jonas every standup. He's been here 3 years. I'm 5 weeks in.", "Cluster quota — felt like proof I don't matter yet. (I know that's not true.)", 'Slept 5h Tuesday. Recipe for next-day regret.'])
-  const nextItems = draft?.next !== undefined ? draftLines(draft.next) : (m
-    ? ['Ship LoRA sweep results once cluster unblocks.', 'Pair with Jonas on the streaming token-budget RFC.', "Volunteer to present at Thursday's research review."]
-    : ['No laptop after 10pm. Real sleep is a feature, not a bug.', 'Ask one "dumb" question per day in standup. Out loud.', "Send Maya the manager version of this. She doesn't need the rest."])
+  const learningItems = draft?.learnings !== undefined ? draftLines(draft.learnings) : []
+  const blockerItems = draft?.blockers !== undefined ? draftLines(draft.blockers) : []
+  const nextItems = draft?.next !== undefined ? draftLines(draft.next) : []
   return (
     <div style={{ flex: 1, overflow: fixed ? 'hidden' : 'auto', background: '#E9E8E7', padding: fixed ? '18px 18px 24px' : '32px 24px 60px', display: fixed ? 'flex' : 'block', alignItems: fixed ? 'flex-start' : undefined }}>
       <div style={{ width: '100%', maxWidth: fixed ? 620 : 680, margin: '0 auto', background: '#fff', boxShadow: '0 1px 4px rgba(20,18,14,0.10)', padding: fixed ? '34px 46px' : '60px 72px', minHeight: fixed ? 'auto' : 700, boxSizing: 'border-box', fontSize: fixed ? 12 : undefined }}>
@@ -361,7 +315,6 @@ function DocumentPreview({ r, variant, draft, user, wins = [], fixed = false }) 
           {[
             { l: 'Score', v: r.score }, { l: 'Wins', v: r.wins },
             { l: 'Learnings', v: r.learnings }, { l: 'Blockers', v: r.blockers },
-            ...(!m ? [{ l: 'Mood', v: '7.4' }] : []),
           ].map((s, i, arr) => (
             <div key={s.l} style={{ flex: 1, padding: '10px 14px', borderRight: i < arr.length - 1 ? '1px solid #D0CCC7' : 'none' }}>
               <div style={{ fontSize: 10, color: '#6B6760', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>{s.l}</div>
@@ -507,10 +460,10 @@ function CoachPanel({ report: r, variant }) {
     setDraft('')
     setPending(true)
     try {
-      const reply = await window.claude?.complete({ messages: [{ role: 'user', content: `You are Steppr's AI Coach for Daryl, ML/AI intern at Vector Lab in ${r.week}. Concise (2–3 paragraphs), warm but direct. Score ${r.score}, ${r.wins} wins, ${r.blockers} blockers. User: "${t}"` }] })
+      const reply = await window.claude?.complete({ messages: [{ role: 'user', content: `You are Steppr's AI Coach for the current profile in ${r.week}. Concise (2-3 paragraphs), warm but direct. Score ${r.score}, ${r.wins} wins, ${r.blockers} blockers. User: "${t}"` }] })
       setMsgs(m => [...m, { role: 'assistant', content: reply }])
     } catch {
-      setMsgs(m => [...m, { role: 'assistant', content: "Focus on visibility this week. Send Maya a 3-bullet update Friday morning. Volunteer to present the eval results at Thursday's review." }])
+      setMsgs(m => [...m, { role: 'assistant', content: 'Focus on one concrete outcome, one blocker, and one specific next step from your saved weekly data.' }])
     }
     setPending(false)
   }
@@ -523,11 +476,11 @@ function CoachPanel({ report: r, variant }) {
   ]
 
   const memoryItems = [
-    'Wants return offer at Vector Lab',
-    'Strongest after planning mornings',
-    'Mentor: Maya · Senior: Jonas',
-    'Underdeveloped: communication',
-    'Wins cadence improving week-over-week',
+    'Uses saved wins, blockers, and learning notes',
+    'Manager version keeps private notes out',
+    'Personal version can be more reflective',
+    'Review drafts are saved per profile',
+    'Weekly metrics are computed from logged data',
   ]
 
   return (
@@ -565,7 +518,7 @@ function CoachPanel({ report: r, variant }) {
         {tab === 'chat' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--ink-2)', margin: 0 }}>
-              Hey Daryl — I've got your <strong>{r.week}</strong> context loaded. What's on your mind?
+              I have your <strong>{r.week}</strong> context loaded. What's on your mind?
             </p>
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
               {COACH_PROMPTS.slice(0, 3).map(p => (
@@ -605,7 +558,7 @@ function CoachPanel({ report: r, variant }) {
             ))}
             <div style={{ marginTop: 4, padding: '10px 12px', background: 'var(--accent-tint)', borderRadius: 9, border: '1px solid rgba(0,53,148,0.15)' }}>
               <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--accent-2)', marginBottom: 4 }}>AI Summary</div>
-              <p style={{ margin: 0, fontSize: 12, color: 'var(--ink-2)', lineHeight: 1.6 }}>Strong week. Eval pipeline win is resume-ready. Cluster quota blocker needs escalation — loop Maya in directly.</p>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--ink-2)', lineHeight: 1.6 }}>Use this week's saved wins and blockers to make the review concrete and actionable.</p>
             </div>
           </div>
         )}
@@ -716,7 +669,7 @@ function StatusBar({ r, variant, view, latexSource }) {
         </button>
         <button disabled={variant === 'personal'}
           style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: variant === 'personal' ? 'not-allowed' : 'pointer', color: variant === 'personal' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.65)', fontSize: 10.5, padding: '0 6px' }}>
-          <I.Send size={11}/> Send to Maya
+          <I.Send size={11}/> Send to manager
         </button>
         {view === 'latex' && (
           <button onClick={() => navigator.clipboard?.writeText(latexSource)}
@@ -725,7 +678,7 @@ function StatusBar({ r, variant, view, latexSource }) {
           </button>
         )}
         <span style={{ width: 1, height: 12, background: 'rgba(255,255,255,0.12)', margin: '0 8px' }}/>
-        <span style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.4)', paddingRight: 4 }}>ML Intern · Vector Lab</span>
+        <span style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.4)', paddingRight: 4 }}>Current profile</span>
       </div>
     </div>
   )

@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import { useMutation } from 'convex/react'
+import { api } from '../../convex/_generated/api'
 
 const TOTAL_STEPS = 7
 
@@ -351,7 +353,7 @@ function Step7({ data, set }) {
   )
 }
 
-function Done({ data, setRoute }) {
+function Done({ data, setRoute, saving }) {
   const name = (data.name || 'friend').split(' ')[0]
   const roleLabel = { intern: 'interns', newgrad: 'new grads', ic: 'ICs', manager: 'managers', founder: 'founders', switcher: 'career switchers' }
   const connCount = Object.values(data.connectors || {}).filter(Boolean).length
@@ -390,7 +392,7 @@ function Done({ data, setRoute }) {
         ))}
       </ul>
       <button
-        onClick={() => setRoute('dashboard')}
+        onClick={() => !saving && setRoute('dashboard')}
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 8,
           padding: '16px 28px', borderRadius: 999,
@@ -401,7 +403,7 @@ function Done({ data, setRoute }) {
         onMouseEnter={e => e.target.style.background = 'var(--accent-2)'}
         onMouseLeave={e => e.target.style.background = 'var(--accent)'}
       >
-        Open Steppr {ARROW}
+        {saving ? 'Saving...' : 'Open Steppr'} {ARROW}
       </button>
     </div>
   )
@@ -409,9 +411,11 @@ function Done({ data, setRoute }) {
 
 export default function OnboardingPage({ setRoute }) {
   const [step, setStep] = useState(0)
+  const [saving, setSaving] = useState(false)
   const [data, setData] = useState({
     name: '', role: '', goals: [], connectors: {}, checkin: '6:00pm', logmode: 'both', manager: '', privacy: 'local',
   })
+  const completeOnboarding = useMutation(api.users.completeOnboarding)
   const set = (patch) => setData(d => ({ ...d, ...patch }))
 
   const canNext = () => {
@@ -427,6 +431,22 @@ export default function OnboardingPage({ setRoute }) {
 
   const STEPS = [Step1, Step2, Step3, Step4, Step5, Step6, Step7]
   const Cur = isDone ? null : STEPS[step]
+  const finish = async () => {
+    if (!canNext() || saving) return
+    setSaving(true)
+    try {
+      await completeOnboarding({
+        name: data.name || undefined,
+        role: data.role,
+        managerEmail: data.manager || undefined,
+        goals: data.goals || [],
+        aiMode: data.privacy || 'local',
+      })
+      setStep(TOTAL_STEPS)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <>
@@ -503,7 +523,7 @@ export default function OnboardingPage({ setRoute }) {
           {!isDone && <ProgressDots step={step} />}
 
           {isDone
-            ? <Done data={data} setRoute={setRoute}/>
+            ? <Done data={data} setRoute={setRoute} saving={saving}/>
             : <Cur data={data} set={set}/>
           }
 
@@ -530,8 +550,8 @@ export default function OnboardingPage({ setRoute }) {
                 )}
                 <button
                   className={`ob-next${step === TOTAL_STEPS - 1 ? ' accent' : ''}`}
-                  onClick={() => canNext() && setStep(s => Math.min(TOTAL_STEPS, s + 1))}
-                  disabled={!canNext()}
+                  onClick={() => step === TOTAL_STEPS - 1 ? finish() : canNext() && setStep(s => Math.min(TOTAL_STEPS, s + 1))}
+                  disabled={!canNext() || saving}
                   style={{
                     padding: '14px 24px', borderRadius: 999,
                     background: step === TOTAL_STEPS - 1 ? 'var(--accent)' : 'var(--ink)',
@@ -539,9 +559,9 @@ export default function OnboardingPage({ setRoute }) {
                     fontSize: 14, fontWeight: 600, cursor: canNext() ? 'pointer' : 'not-allowed',
                     display: 'inline-flex', alignItems: 'center', gap: 8,
                     transition: 'all .15s',
-                    opacity: canNext() ? 1 : 0.5,
+                    opacity: canNext() && !saving ? 1 : 0.5,
                   }}>
-                  {step === TOTAL_STEPS - 1 ? 'Finish setup' : 'Continue'} {ARROW}
+                  {saving ? 'Saving...' : step === TOTAL_STEPS - 1 ? 'Finish setup' : 'Continue'} {ARROW}
                 </button>
               </div>
             </div>

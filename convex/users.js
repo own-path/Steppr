@@ -46,8 +46,10 @@ export const upsertUser = mutation({
 
 export const completeOnboarding = mutation({
   args: {
+    name: v.optional(v.string()),
     role: v.string(),
     team: v.optional(v.string()),
+    managerEmail: v.optional(v.string()),
     goals: v.array(v.string()),
     aiMode: v.string(),
   },

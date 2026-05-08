@@ -9,6 +9,7 @@ export default defineSchema({
     avatarUrl: v.optional(v.string()),
     role: v.optional(v.string()),
     team: v.optional(v.string()),
+    managerEmail: v.optional(v.string()),
     goals: v.optional(v.array(v.string())),
     aiMode: v.optional(v.string()),
     onboardingComplete: v.boolean(),
